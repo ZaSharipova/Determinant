@@ -40,7 +40,7 @@ public:
     }
 
     Matrix& operator=(const Matrix& other) = delete;
-    Matrix& operator=(const Matrix&& other) = delete;
+    Matrix& operator=(Matrix&& other) = delete;
 
     ~Matrix() {
          delete[] array_;
@@ -58,7 +58,7 @@ public:
         Matrix res(*this);
         for (std::size_t i = 0; i < size_; i++) {
             for (std::size_t j = 0; j < size_; j++) {
-                res[j][i] = array_[i][j];
+                res[j * size_ + i] = array_[i * size_ + j];
             }
         }
 
@@ -77,7 +77,7 @@ public:
     Matrix MultiplyRow(std::size_t row, int mult) const {
         Matrix res(*this);
         for (std::size_t i = 0; i < size_; i++) {
-            res.array_[i * size_ * row] = array_[i * size_ * row] * mult;
+            res.array_[row * size_ * i] = array_[row * size_ * i] * mult;
         }
 
         return res;
@@ -102,7 +102,7 @@ public:
         }
     }
 
-    double Determinant() const requires std::is_same_v<T, double> {
+    double Determinant() const requires std::is_floating_point<T>::value {
         Matrix res(*this);
         bool sign = false;
         for (std::size_t i = 0; i < size_; i++) {
@@ -135,8 +135,40 @@ public:
         return result * (1 ? !sign : sign);
     }
 
-private:
+    int Determinant() const requires std::is_integral<T>::value {
+        Matrix res(*this);
+        int sign = 1;
+        int prev = 1;
 
+        for (std::size_t k = 0; k + 1 < size_; k++) {
+            if (res.array_[k * size_ + k] == 0) {
+                std::size_t row = k + 1;
+                while (row < size_ && res.array_[row * size_ + k] == 0) {
+                    row++;
+                }
+
+                if (row == size_) {
+                    return 0;
+                }
+
+                SwapRows(res, k, row);
+                sign = -sign;
+            }
+
+            for (std::size_t i = k + 1; i < size_; i++) {
+                for (std::size_t j = k + 1; j < size_; j++) {
+                    res.array_[i * size_ + j] = (res.array_[i * size_ + j] * res.array_[k * size_ + k]
+                                               - res.array_[i * size_ + k] * res.array_[k * size_ + j]) / prev;
+                }
+            }
+
+            prev = res.array_[k * size_ + k];
+        }
+
+        return sign * res.array_[size_ * size_ - 1];
+    }
+
+private:
     Matrix& SwapRows(Matrix& matrix, std::size_t lhs, std::size_t rhs) const {
         for (std::size_t i = 0; i < size_; i++) {
             std::swap(matrix.array_[lhs * size_ + i], matrix.array_[rhs * size_ + i]);
@@ -151,6 +183,25 @@ private:
         }
 
         return matrix;
+    }
+
+    Matrix RemoveRowCol(std::size_t row, std::size_t col) const {
+        Matrix res(size_ - 1);
+
+        std::size_t counter = 0;
+        for (std::size_t i = 0; i < size_; i++) {
+            if (i == row) {
+                continue;
+            }
+
+            for (std::size_t j = 0; j < size_; j++) {
+                if (j != col) {
+                    res.array_[counter++] = array_[i * size_ + j];
+                }
+            }
+        }
+
+        return res;
     }
 
     std::size_t size_ = 0;
