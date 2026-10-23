@@ -5,14 +5,16 @@
 #include <ostream>
 #include <iostream>
 #include <type_traits>
+#include <utility>
+
+#include "flat_storage.hpp"
 
 namespace Matrix {
 
-template <typename T>
+template <typename T, typename Storage = FlatStorage<T>>
 class Matrix {
 public:
-    Matrix(std::size_t size) : size_(size) {
-        AllocateArray(GetSize() * GetSize());
+    Matrix(std::size_t size) : size_(size), storage_(size_) {
         const T default_value = T{1};
 
         for (std::size_t index = 0; index < GetSize(); index++) {
@@ -21,48 +23,43 @@ public:
     }
 
     template <typename It>
-    Matrix(std::size_t size, It begin, It end) : size_(size) {
-        AllocateArray(GetSize() * GetSize());
-
-        std::size_t counter = 0;
+    Matrix(std::size_t size, It begin, It end) : size_(size), storage_(size_) {
+        std::size_t row = 0;
+        std::size_t col = 0;
         for (auto it = begin; it != end; it++) {
-            array_[counter++] = *it;
+            (*this)[row, col] = *it;
+            col++;
+            if (col == GetSize()) { // FIXME
+                col = 0;
+                row++;
+            }
         }
     }
 
-    Matrix(const Matrix& other) : size_(other.size_) {
-        AllocateArray(other.GetSize() * other.GetSize());
-
-        for (std::size_t i = 0; i < GetSize() * GetSize(); i++) {
-            array_[i] = other.array_[i];
+    Matrix(const Matrix& other) : size_(other.size_), storage_(size_) {
+        for (std::size_t i = 0; i < GetSize(); i++) {
+            for (std::size_t j = 0; j < GetSize(); j++) {
+                (*this)[i, j] = other[i, j];
+            }
         }
     }
 
-    Matrix(Matrix&& other) noexcept : size_(other.GetSize()), array_(other.array_) {
-        other.array_ = nullptr;
+    Matrix(Matrix&& other) noexcept : size_(other.GetSize()), storage_(std::move(other.storage_)) {
     }
 
     Matrix& operator=(const Matrix& other) = delete;
     Matrix& operator=(Matrix&& other) = delete;
 
-    ~Matrix() {
-         delete[] array_;
-    }
-
     T& operator[](std::size_t row, std::size_t col) {
-        return array_[row * GetSize() + col];
+        return storage_[row, col];
     }
 
     const T& operator[](std::size_t row, std::size_t col) const {
-        return array_[row * GetSize() + col];
+        return storage_[row, col];
     }
 
     std::size_t GetSize() const {
         return size_;
-    }
-
-    const T* GetMatrix() const {
-        return array_;
     }
 
     Matrix Transpose() const {
@@ -78,8 +75,11 @@ public:
 
     Matrix Negate() const {
         Matrix res(*this);
-        for (std::size_t i = 0; i < GetSize() * GetSize(); i++) {
-            res.array_[i] = -array_[i];
+
+        for (std::size_t i = 0; i < GetSize(); i++) {
+            for (std::size_t j = 0; j < GetSize(); j++) {
+                res[i, j] = -(*this)[i, j];
+            }
         }
 
         return res;
@@ -204,12 +204,8 @@ private:
         return matrix;
     }
 
-    void AllocateArray(std::size_t capacity) {
-        array_ = new T[capacity]();
-    }
-
     std::size_t size_ = 0;
-    T* array_ = nullptr;
+    Storage storage_;
 };
 
 } // namespace Matrix
