@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "flat_storage.hpp"
+// #include "jagged_storage.hpp"
 
 namespace Matrix {
 
@@ -23,7 +24,7 @@ public:
     }
 
     template <typename It>
-    Matrix(std::size_t size, It begin, It end) : size_(size), storage_(size_) {
+    Matrix(std::size_t size, It begin, It end) : size_(size), storage_(size_) { // а нужно ли TODO
         std::size_t row = 0;
         std::size_t col = 0;
         for (auto it = begin; it != end; it++) {
@@ -122,7 +123,7 @@ public:
             if (res[i, i] == default_value) {
                 for (std::size_t k = i + 1; k < GetSize(); k++) {
                     if (res[k, i] != default_value) {
-                        SwapRows(res, i, k);
+                        res.storage_.SwapRows(i, k);
                         sign = !sign;
                         break;
                     }
@@ -188,12 +189,8 @@ public:
     }
 
 private:
-    Matrix& SwapRows(Matrix& matrix, std::size_t lhs, std::size_t rhs) const {
-        for (std::size_t i = 0; i < GetSize(); i++) {
-            std::swap(matrix[lhs, i], matrix[rhs, i]);
-        }
-
-        return matrix;
+    void SwapRows(std::size_t lhs, std::size_t rhs) {
+        storage_.SwapRows(lhs, rhs);
     }
 
     Matrix& SubMultRows(Matrix& matrix, std::size_t lhs, std::size_t rhs, const T& mult) const {

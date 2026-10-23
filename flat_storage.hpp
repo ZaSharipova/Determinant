@@ -1,14 +1,26 @@
 #pragma once
 
 #include <cassert>
+#include <cstddef>
 #include <algorithm>
 
 namespace Matrix {
+
 template <typename T>
 class FlatStorage {
 public:
     FlatStorage(std::size_t size) : size_(size) {
         AllocateArray(size * size);
+    }
+
+    template <typename It>
+    FlatStorage(std::size_t size, It begin, It end) : size_(size) {
+        AllocateArray(size * size);
+
+        std::size_t index = 0;
+        for (auto it = begin; it != end; it++) {
+            array_[index++] = *it;
+        }
     }
 
     FlatStorage(const FlatStorage& other) : size_(other.GetSize()) {
@@ -46,6 +58,12 @@ public:
 
     std::size_t GetSize() const {
         return size_;
+    }
+
+    void SwapRows(std::size_t lhs, std::size_t rhs) {
+        for (std::size_t i = 0; i < GetSize(); i++) {
+            std::swap((*this)[lhs, i], (*this)[rhs, i]);
+        }
     }
 
 private:

@@ -1,3 +1,5 @@
+#include "flat_storage.hpp"
+#include "jagged_storage.hpp"
 #include "matrixes.hpp"
 
 #include <iostream>
@@ -6,12 +8,7 @@
 
 int main() {
     std::vector<double> vec{1, 2, 3, 4};
-    Matrix::Matrix<double> matr(2, vec.begin(), vec.end());
-//
-//     matr.Dump(std::cout);
-//     std::cout << matr.GetSize() << "\n";
-//
-    // std::vector<int> vec{1, 2, 3, 4};
-    // Matrix::Matrix<int> matr(2, vec.begin(), vec.end());
-    std::cout << matr.Determinant();
+    Matrix::Matrix<double, Matrix::FlatStorage<double>> matr1(2, vec.begin(), vec.end());
+    Matrix::Matrix<double, Matrix::JaggedStorage<double>> matr2(2, vec.begin(), vec.end());
+    std::cout << matr1.Determinant() << " " << matr2.Determinant();
 }
