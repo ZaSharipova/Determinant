@@ -1,6 +1,6 @@
 #pragma once
 
-#include <array>
+#include <cassert>
 #include <cstddef>
 #include <ostream>
 #include <iostream>
@@ -12,16 +12,17 @@ template <typename T>
 class Matrix {
 public:
     Matrix(std::size_t size) : size_(size) {
-        array_ = new T[size_ * size_]();
+        AllocateArray(GetSize() * GetSize());
+        const T default_value = T{1};
 
-        for (std::size_t index = 0; index < size; index++) {
-            array_[index + size * index] = 1;
+        for (std::size_t index = 0; index < GetSize(); index++) {
+            (*this)[index, index] = default_value;
         }
     }
 
     template <typename It>
     Matrix(std::size_t size, It begin, It end) : size_(size) {
-        array_ = new T[size_ * size_]();
+        AllocateArray(GetSize() * GetSize());
 
         std::size_t counter = 0;
         for (auto it = begin; it != end; it++) {
@@ -29,13 +30,15 @@ public:
         }
     }
 
-    Matrix(const Matrix& other) : size_(other.size_), array_(new T[other.size_ * other.size_]) {
-        for (std::size_t i = 0; i < size_ * size_; i++) {
+    Matrix(const Matrix& other) : size_(other.size_) {
+        AllocateArray(other.GetSize() * other.GetSize());
+
+        for (std::size_t i = 0; i < GetSize() * GetSize(); i++) {
             array_[i] = other.array_[i];
         }
     }
 
-    Matrix(Matrix&& other) noexcept : array_(other.array_), size_(other.size_) {
+    Matrix(Matrix&& other) noexcept : size_(other.GetSize()), array_(other.array_) {
         other.array_ = nullptr;
     }
 
@@ -44,6 +47,14 @@ public:
 
     ~Matrix() {
          delete[] array_;
+    }
+
+    T& operator[](std::size_t row, std::size_t col) {
+        return array_[row * GetSize() + col];
+    }
+
+    const T& operator[](std::size_t row, std::size_t col) const {
+        return array_[row * GetSize() + col];
     }
 
     std::size_t GetSize() const {
@@ -56,9 +67,9 @@ public:
 
     Matrix Transpose() const {
         Matrix res(*this);
-        for (std::size_t i = 0; i < size_; i++) {
-            for (std::size_t j = 0; j < size_; j++) {
-                res[j * size_ + i] = array_[i * size_ + j];
+        for (std::size_t i = 0; i < GetSize(); i++) {
+            for (std::size_t j = 0; j < GetSize(); j++) {
+                res[j, i] = (*this)[i, j];
             }
         }
 
@@ -67,141 +78,134 @@ public:
 
     Matrix Negate() const {
         Matrix res(*this);
-        for (std::size_t i = 0; i < size_ * size_; i++) {
+        for (std::size_t i = 0; i < GetSize() * GetSize(); i++) {
             res.array_[i] = -array_[i];
         }
 
         return res;
     }
 
-    Matrix MultiplyRow(std::size_t row, int mult) const {
+    Matrix MultiplyRow(std::size_t row, const T& mult) const {
         Matrix res(*this);
-        for (std::size_t i = 0; i < size_; i++) {
-            res.array_[row * size_ * i] = array_[row * size_ * i] * mult;
+        for (std::size_t i = 0; i < GetSize(); i++) {
+            res[row, i] = (*this)[row, i] * mult;
         }
 
         return res;
     }
 
-    T GetTrace() const { // TODO
+    T GetTrace() const {
         T res = T{};
-        for (std::size_t index = 0; index < size_; index++) {
-            res += array_[index * size_ + index];
+        for (std::size_t index = 0; index < GetSize(); index++) {
+            res += (*this)[index, index];
         }
 
         return res;
     }
 
-    void Dump(std::ostream& stream) {
-        for (std::size_t i = 0; i < size_; i++) {
-            for (std::size_t j = 0; j < size_; j++) {
-                stream << array_[i * size_ + j] << " ";
+    void Dump(std::ostream& stream) const {
+        for (std::size_t i = 0; i < GetSize(); i++) {
+            for (std::size_t j = 0; j < GetSize(); j++) {
+                stream << (*this)[i, j] << " ";
             }
 
-            stream << "\n";
+            stream << std::endl;
         }
     }
 
-    double Determinant() const requires std::is_floating_point<T>::value {
+    T Determinant() const requires std::is_floating_point<T>::value {
         Matrix res(*this);
         bool sign = false;
-        for (std::size_t i = 0; i < size_; i++) {
-            for (std::size_t k = i; k < size_; k++) {
-                if (res.array_[k * size_ + i] != 0.0) {
-                    SwapRows(res, i, k);
-                    sign = (sign ? false : true);
-                    break;
+        const T default_value = T{0};
+
+        for (std::size_t i = 0; i < GetSize(); i++) {
+            if (res[i, i] == default_value) {
+                for (std::size_t k = i + 1; k < GetSize(); k++) {
+                    if (res[k, i] != default_value) {
+                        SwapRows(res, i, k);
+                        sign = !sign;
+                        break;
+                    }
                 }
             }
 
-            if (res.array_[i * size_ + i] == T{}) {
-                return 0.0;
+            if (res[i, i] == default_value) {
+                return default_value;
             }
 
-            for (std::size_t k = i + 1; k < size_; k++) {
-                if (res.array_[k * size_ + i] != 0.0) {
-                    SubMultRows(res, i, k, res.array_[k * size_ + i] / res.array_[i * size_ + i]);
+            for (std::size_t k = i + 1; k < GetSize(); k++) {
+                if (res[k, i] != default_value) {
+                    SubMultRows(res, i, k, res[k, i] / res[i, i]);
                 }
             }
         }
 
-        res.Dump(std::cout);
-
-        T result = 1.0;
-        for (std::size_t i = 0; i < size_; i++) {
-            result *= res.array_[i * size_ + i];
+        T result = T{1};
+        for (std::size_t i = 0; i < GetSize(); i++) {
+            result *= res[i, i];
         }
 
-        return result * (1 ? !sign : sign);
+        return result * (sign ? -1 : 1);
     }
 
-    int Determinant() const requires std::is_integral<T>::value {
-        Matrix res(*this);
-        int sign = 1;
-        int prev = 1;
+    T Determinant() const requires std::is_integral<T>::value {
+        if (GetSize() == 0) {
+            return 0;
+        }
 
-        for (std::size_t k = 0; k + 1 < size_; k++) {
-            if (res.array_[k * size_ + k] == 0) {
-                std::size_t row = k + 1;
-                while (row < size_ && res.array_[row * size_ + k] == 0) {
-                    row++;
+        Matrix minors(*this);
+        bool sign = false;
+        T prev = 1;
+        const T default_value = 0;
+
+        for (std::size_t i = 0; i + 1 < GetSize(); i++) {
+            if (minors[i, i] == default_value) {
+                std::size_t row = i + 1;
+                for (; row < GetSize(); row++) {
+                    if (minors[row, i] != default_value) {
+                        break;
+                    }
                 }
 
-                if (row == size_) {
+                if (row == GetSize()) {
                     return 0;
                 }
 
-                SwapRows(res, k, row);
-                sign = -sign;
+                SwapRows(minors, i, row);
+                sign = !sign;
             }
 
-            for (std::size_t i = k + 1; i < size_; i++) {
-                for (std::size_t j = k + 1; j < size_; j++) {
-                    res.array_[i * size_ + j] = (res.array_[i * size_ + j] * res.array_[k * size_ + k]
-                                               - res.array_[i * size_ + k] * res.array_[k * size_ + j]) / prev;
+            for (std::size_t k = i + 1; k < GetSize(); k++) {
+                for (std::size_t j = i + 1; j < GetSize(); j++) {
+                    minors[k, j] = (minors[k, j] * minors[i, i] - minors[k, i] * minors[i, j]) / prev;
                 }
             }
 
-            prev = res.array_[k * size_ + k];
+            prev = minors[i, i];
         }
 
-        return sign * res.array_[size_ * size_ - 1];
+        return minors[GetSize() - 1, GetSize() - 1]  * (sign ? -1 : 1);
     }
 
 private:
     Matrix& SwapRows(Matrix& matrix, std::size_t lhs, std::size_t rhs) const {
-        for (std::size_t i = 0; i < size_; i++) {
-            std::swap(matrix.array_[lhs * size_ + i], matrix.array_[rhs * size_ + i]);
+        for (std::size_t i = 0; i < GetSize(); i++) {
+            std::swap(matrix[lhs, i], matrix[rhs, i]);
         }
 
         return matrix;
     }
 
-    Matrix& SubMultRows(Matrix& matrix, std::size_t lhs, std::size_t rhs, double mult) const {
-        for (std::size_t i = 0; i < size_; i++) {
-            matrix.array_[rhs * size_ + i] -= matrix.array_[lhs * size_ + i] * mult;
+    Matrix& SubMultRows(Matrix& matrix, std::size_t lhs, std::size_t rhs, const T& mult) const {
+        for (std::size_t i = 0; i < GetSize(); i++) {
+            matrix[rhs, i] -= matrix[lhs, i] * mult;
         }
 
         return matrix;
     }
 
-    Matrix RemoveRowCol(std::size_t row, std::size_t col) const {
-        Matrix res(size_ - 1);
-
-        std::size_t counter = 0;
-        for (std::size_t i = 0; i < size_; i++) {
-            if (i == row) {
-                continue;
-            }
-
-            for (std::size_t j = 0; j < size_; j++) {
-                if (j != col) {
-                    res.array_[counter++] = array_[i * size_ + j];
-                }
-            }
-        }
-
-        return res;
+    void AllocateArray(std::size_t capacity) {
+        array_ = new T[capacity]();
     }
 
     std::size_t size_ = 0;
