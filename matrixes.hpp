@@ -8,7 +8,7 @@
 #include <utility>
 
 #include "flat_storage.hpp"
-// #include "jagged_storage.hpp"
+#include "jagged_storage.hpp"
 
 namespace Matrix {
 
@@ -24,7 +24,7 @@ public:
     }
 
     template <typename It>
-    Matrix(std::size_t size, It begin, It end) : size_(size), storage_(size_) { // а нужно ли TODO
+    Matrix(std::size_t size, It begin, It end) : size_(size), storage_(size_) {
         std::size_t row = 0;
         std::size_t col = 0;
         for (auto it = begin; it != end; it++) {
@@ -45,18 +45,17 @@ public:
         }
     }
 
-    Matrix(Matrix&& other) noexcept : size_(other.GetSize()), storage_(std::move(other.storage_)) {
-    }
+    Matrix(Matrix&& other) noexcept : size_(other.GetSize()), storage_(std::move(other.storage_)) {}
 
     Matrix& operator=(const Matrix& other) = delete;
     Matrix& operator=(Matrix&& other) = delete;
 
     T& operator[](std::size_t row, std::size_t col) {
-        return storage_[row, col];
+        return GetStorage()[row, col];
     }
 
     const T& operator[](std::size_t row, std::size_t col) const {
-        return storage_[row, col];
+        return GetStorage()[row, col];
     }
 
     std::size_t GetSize() const {
@@ -123,7 +122,7 @@ public:
             if (res[i, i] == default_value) {
                 for (std::size_t k = i + 1; k < GetSize(); k++) {
                     if (res[k, i] != default_value) {
-                        res.storage_.SwapRows(i, k);
+                        res.SwapRows(i, k);
                         sign = !sign;
                         break;
                     }
@@ -172,7 +171,7 @@ public:
                     return 0;
                 }
 
-                SwapRows(minors, i, row);
+                minors.SwapRows(i, row);
                 sign = !sign;
             }
 
@@ -189,16 +188,22 @@ public:
     }
 
 private:
-    void SwapRows(std::size_t lhs, std::size_t rhs) {
-        storage_.SwapRows(lhs, rhs);
+    Storage& GetStorage() {
+        return storage_;
     }
 
-    Matrix& SubMultRows(Matrix& matrix, std::size_t lhs, std::size_t rhs, const T& mult) const {
+    const Storage& GetStorage() const {
+        return storage_;
+    }
+
+    void SwapRows(std::size_t lhs, std::size_t rhs) {
+        GetStorage().SwapRows(lhs, rhs);
+    }
+
+    void SubMultRows(Matrix& matrix, std::size_t lhs, std::size_t rhs, const T& mult) const {
         for (std::size_t i = 0; i < GetSize(); i++) {
             matrix[rhs, i] -= matrix[lhs, i] * mult;
         }
-
-        return matrix;
     }
 
     std::size_t size_ = 0;
