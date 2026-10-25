@@ -33,6 +33,7 @@ public:
 
     JaggedStorage(JaggedStorage&& other) noexcept : size_(other.GetSize()), array_(other.array_) {
         other.array_ = nullptr;
+        other.size_ = 0; // doing this for no segfault in destructor
     }
 
     JaggedStorage& operator=(const JaggedStorage& other) = delete;
