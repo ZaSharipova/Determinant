@@ -19,3 +19,8 @@ include_directories(${INCLUDE_DIR})
 add_executable(tests_e2e e2e_tests.cpp)
 target_link_libraries(tests_e2e PRIVATE GTest::gtest_main)
 gtest_discover_tests(tests_e2e)
+
+find_package(benchmark REQUIRED)
+add_executable(storage_bench benchmarks.cpp)
+target_compile_features(storage_bench PRIVATE cxx_std_23)
+target_link_libraries(storage_bench PRIVATE benchmark::benchmark)
