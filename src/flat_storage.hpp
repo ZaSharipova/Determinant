@@ -10,25 +10,19 @@ template <typename T>
 class FlatStorage {
 public:
     FlatStorage(std::size_t size) : size_(size) {
-        AllocateArray(size * size);
+        AllocateArray(size * size, T());
     }
 
     template <typename It>
     FlatStorage(std::size_t size, It begin, It end) : size_(size) {
+        assert(std::distance(begin, end) == size_);
         AllocateArray(size * size);
-
-        std::size_t index = 0;
-        for (auto it = begin; it != end; it++) {
-            array_[index++] = *it;
-        }
+        std::copy(begin, end, array_);
     }
 
     FlatStorage(const FlatStorage& other) : size_(other.GetSize()) {
         AllocateArray(GetSize() * GetSize());
-
-        for (std::size_t i = 0; i < GetSize() * GetSize(); i++) {
-            array_[i] = other.array_[i];
-        }
+        std::copy(other.array_, other.array_ + GetSize() * GetSize(), array_);
     }
 
     ~FlatStorage() {
@@ -60,15 +54,23 @@ public:
         return size_;
     }
 
+    T* GetArray() const {
+        return array_;
+    }
+
     void SwapRows(std::size_t lhs, std::size_t rhs) {
-        for (std::size_t i = 0; i < GetSize(); i++) {
-            std::swap((*this)[lhs, i], (*this)[rhs, i]);
-        }
+        std::swap_ranges(GetArray() + GetSize() * lhs, GetArray() + GetSize() * (lhs + 1),
+                         GetArray() + GetSize() * rhs);
     }
 
 private:
     void AllocateArray(std::size_t capacity) {
-        array_ = new T[capacity]();
+        array_ = new T[capacity];
+    }
+
+    void AllocateArray(std::size_t capacity, const T& elem) {
+        AllocateArray(capacity);
+        std::fill(array_, array_ + GetSize() * GetSize(), elem);
     }
 
     std::size_t size_ = 0;

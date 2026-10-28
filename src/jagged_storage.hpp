@@ -10,29 +10,30 @@ template <typename T>
 class JaggedStorage {
 public:
     JaggedStorage(std::size_t size) : size_(size) {
-        AllocateArray(size);
+        AllocateArray(GetSize());
+        std::fill(data_, data_ + GetSize() * GetSize(), T());
     }
 
     JaggedStorage(const JaggedStorage& other) : size_(other.GetSize()) {
         AllocateArray(GetSize());
+        std::copy(other.data_, other.data_ + GetSize() * GetSize(), data_);
+    }
 
-        for (std::size_t i = 0; i < GetSize(); i++) {
-            for (std::size_t j = 0; j < GetSize(); j++) {
-                array_[i][j] = other.array_[i][j];
-            }
-        }
+    template <typename It>
+    JaggedStorage(std::size_t size, It begin, It end) : size_(size) {
+        assert(std::distance(begin, end) == size_);
+        AllocateArray(GetSize());
+        std::copy(begin, end, data_);
     }
 
     ~JaggedStorage() {
-        for (std::size_t i = 0; i < GetSize(); i++) {
-            delete[] array_[i];
-        }
-
+        delete[] data_;
         delete[] array_;
     }
 
-    JaggedStorage(JaggedStorage&& other) noexcept : size_(other.GetSize()), array_(other.array_) {
+    JaggedStorage(JaggedStorage&& other) noexcept : size_(other.GetSize()), array_(other.array_), data_(other.data_) {
         other.array_ = nullptr;
+        other.data_ = nullptr;
         other.size_ = 0; // doing this for no segfault in destructor
     }
 
@@ -63,15 +64,18 @@ public:
 
 private:
     void AllocateArray(std::size_t size) {
-        array_ = new T*[size]();
+        array_ = new T*[GetSize()];
+        data_ = new T[size * size];
 
         for (std::size_t i = 0; i < size; i++) {
-            array_[i] = new T[size]();
+            array_[i] = data_ + i * size_;
         }
     }
 
     std::size_t size_ = 0;
     T** array_ = nullptr;
+
+    T* data_ = nullptr;
 };
 
 } // namespace Matrix
