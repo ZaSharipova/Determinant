@@ -11,7 +11,6 @@ class JaggedStorage {
 public:
     JaggedStorage(std::size_t size) : size_(size) {
         AllocateArray(GetSize());
-        std::fill(data_, data_ + GetSize() * GetSize(), T());
     }
 
     JaggedStorage(const JaggedStorage& other) : size_(other.GetSize()) {
@@ -65,7 +64,7 @@ public:
 private:
     void AllocateArray(std::size_t size) {
         array_ = new T*[GetSize()];
-        data_ = new T[size * size];
+        data_ = new T[size * size]();
 
         for (std::size_t i = 0; i < size; i++) {
             array_[i] = data_ + i * size_;

@@ -10,7 +10,7 @@ template <typename T>
 class FlatStorage {
 public:
     FlatStorage(std::size_t size) : size_(size) {
-        AllocateArray(size * size, T());
+        AllocateArray(size * size);
     }
 
     template <typename It>
@@ -65,7 +65,7 @@ public:
 
 private:
     void AllocateArray(std::size_t capacity) {
-        array_ = new T[capacity];
+        array_ = new T[capacity]();
     }
 
     void AllocateArray(std::size_t capacity, const T& elem) {
