@@ -20,7 +20,7 @@ public:
 
     template <typename It>
     JaggedStorage(std::size_t size, It begin, It end) : size_(size) {
-        assert(std::distance(begin, end) == size_);
+        assert(std::distance(begin, end) <= GetSize() * GetSize());
         AllocateArray(GetSize());
         std::copy(begin, end, data_);
     }

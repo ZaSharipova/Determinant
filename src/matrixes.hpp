@@ -15,7 +15,7 @@ namespace Matrix {
 template <typename T, typename Storage = FlatStorage<T>>
 class Matrix {
 public:
-    Matrix(std::size_t size) : size_(size), storage_(size_) {
+    Matrix(std::size_t size) : size_(size), storage_(size) {
         const T default_value = T{1};
 
         for (std::size_t index = 0; index < GetSize(); index++) {
@@ -24,26 +24,9 @@ public:
     }
 
     template <typename It>
-    Matrix(std::size_t size, It begin, It end) : size_(size), storage_(size_) {
-        std::size_t row = 0;
-        std::size_t col = 0;
-        for (auto it = begin; it != end; it++) {
-            (*this)[row, col] = *it;
-            col++;
-            if (col == GetSize()) { // FIXME
-                col = 0;
-                row++;
-            }
-        }
-    }
+    Matrix(std::size_t size, It begin, It end) : size_(size), storage_(size_, begin, end) {}
 
-    Matrix(const Matrix& other) : size_(other.size_), storage_(size_) {
-        for (std::size_t i = 0; i < GetSize(); i++) {
-            for (std::size_t j = 0; j < GetSize(); j++) {
-                (*this)[i, j] = other[i, j];
-            }
-        }
-    }
+    Matrix(const Matrix& other) : size_(other.size_), storage_(other.storage_) {}
 
     Matrix(Matrix&& other) noexcept : size_(other.GetSize()), storage_(std::move(other.storage_)) {}
 
@@ -150,7 +133,7 @@ public:
 
     T Determinant() const requires std::is_integral<T>::value {
         if (GetSize() == 0) {
-            return 0;
+            return 1;
         }
 
         Matrix minors(*this);

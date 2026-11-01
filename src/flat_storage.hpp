@@ -15,7 +15,7 @@ public:
 
     template <typename It>
     FlatStorage(std::size_t size, It begin, It end) : size_(size) {
-        assert(std::distance(begin, end) == size_);
+        assert(std::distance(begin, end) <= GetSize() * GetSize());
         AllocateArray(size * size);
         std::copy(begin, end, array_);
     }
